@@ -320,6 +320,27 @@ SR_PRIV void sr_dev_inst_free(struct sr_dev_inst *sdi)
 
 #ifdef HAVE_LIBUSB_1_0
 
+#include <libusb.h>
+
+/** @private
+ *  Fetch enumerated speed of just opened USB device to later provide it to the user
+ *  this to troubleshoot USB hostcontroller/USB hub/USB device speed negotiation issues
+ *  @param[in]  ld @copydoc struct libusb_device *
+ *  @param[in]  udi @copydoc struct sr_usb_dev_inst *
+ *  @retval none
+ */
+SR_PRIV void sr_get_enumerated_speed(struct libusb_device *ld, struct sr_usb_dev_inst *udi)
+{
+	switch (libusb_get_device_speed(ld)) {
+		default:
+		case LIBUSB_SPEED_UNKNOWN: udi->enumerated_speed = 0; break;
+		case LIBUSB_SPEED_LOW:     udi->enumerated_speed = 4; break;
+		case LIBUSB_SPEED_FULL:    udi->enumerated_speed = 12; break;
+		case LIBUSB_SPEED_HIGH:    udi->enumerated_speed = 480; break;
+		case LIBUSB_SPEED_SUPER:   udi->enumerated_speed = 5000; break;
+	}
+}
+
 /** @private
  *  Allocate and init struct for USB device instance.
  *  @param[in]  bus @copydoc sr_usb_dev_inst::bus
@@ -341,6 +362,8 @@ SR_PRIV struct sr_usb_dev_inst *sr_usb_dev_inst_new(uint8_t bus,
 
 	udi->bus = bus;
 	udi->address = address;
+	udi->enumerated_speed = 0;
+	
 	udi->devhdl = hdl;
 
 	return udi;

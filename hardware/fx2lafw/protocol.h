@@ -92,6 +92,7 @@ struct dev_context {
 	int num_samples;
 	int submitted_transfers;
 	int empty_transfer_count;
+	int enumerated_speed;
 
 	void *cb_data;
 	unsigned int num_transfers;

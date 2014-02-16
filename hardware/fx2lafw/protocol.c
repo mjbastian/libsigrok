@@ -249,6 +249,31 @@ SR_PRIV int fx2lafw_dev_open(struct sr_dev_inst *sdi, struct sr_dev_driver *di)
 			break;
 		}
 
+		/*
+ 		 * get enumerated speed now the device is open
+  		 *
+ 		 * usb devices determine 12 / 480 mbps speed right at the start of the USB bus reset (SE0 bus state)
+		 * started by the host (root port on chipset) or delegated to a USB hub via a hub control transfer
+		 * some hubs/hostcontrollers might not recognize the Cypress FX2 device's chirp-K sequence
+		 * (chirp-K: device enables enable HS current source into D- line a few usec after detecting usb bus 
+		 * idle and then SE0/begin of reset)
+		 * This host/device interfacing failure reduces the bus speed to 12 mbps while the device (upstream port) 
+		 * and host/hub (downstream port) should be capable of 480 mbps. The resulting 12 mbps might work for 
+		 * software, but not for speeds above 1 MHz or so
+ 		 */
+		sr_get_enumerated_speed(devlist[i], usb);
+
+		/* check returned speed and adjust default samplerate accordingly */
+		switch (usb->enumerated_speed) {
+			case 12:
+				sr_err("Failed to get enumerate Cypress FX2 on 480 mbps, return to 12 mbps.");
+				break;
+			case 480:
+			case 5000:
+				sr_err("Enumerated Cypress FX2 on %d mbps.", usb->enumerated_speed);
+				break;
+		}
+
 		ret = command_get_fw_version(usb->devhdl, &vi);
 		if (ret != SR_OK) {
 			sr_err("Failed to get firmware version.");

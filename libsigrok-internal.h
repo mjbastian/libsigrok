@@ -166,6 +166,8 @@ struct sr_usb_dev_inst {
 	uint8_t bus;
 	/** Device address on USB bus */
 	uint8_t address;
+	/** Speed on USB bus */
+	uint32_t enumerated_speed;
 	/** libusb device handle */
 	struct libusb_device_handle *devhdl;
 };
@@ -245,6 +247,7 @@ SR_PRIV void sr_dev_inst_free(struct sr_dev_inst *sdi);
 SR_PRIV struct sr_usb_dev_inst *sr_usb_dev_inst_new(uint8_t bus,
 		uint8_t address, struct libusb_device_handle *hdl);
 SR_PRIV void sr_usb_dev_inst_free(struct sr_usb_dev_inst *usb);
+SR_PRIV void sr_get_enumerated_speed(struct libusb_device *ld, struct sr_usb_dev_inst *udi);
 #endif
 
 #ifdef HAVE_LIBSERIALPORT

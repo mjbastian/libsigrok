@@ -111,6 +111,8 @@ static const uint64_t samplerates[] = {
 	SR_MHZ(16),
 	SR_MHZ(24),
 };
+#define SAMPLERATE_INDEX_12MBPS  (7)	
+#define SAMPLERATE_INDEX_480MBPS (sizeof(samplerates)/sizeof(samplerates[0]))
 
 SR_PRIV struct sr_dev_driver fx2lafw_driver_info;
 static struct sr_dev_driver *di = &fx2lafw_driver_info;
@@ -261,7 +263,7 @@ static int dev_open(struct sr_dev_inst *sdi)
 	 */
 	ret = SR_ERR;
 	if (devc->fw_updated > 0) {
-		sr_info("Waiting for device to reset.");
+		sr_err("Waiting for device to reset.");
 		/* Takes >= 300ms for the FX2 to be gone from the USB bus. */
 		g_usleep(300 * 1000);
 		timediff_ms = 0;
@@ -278,10 +280,13 @@ static int dev_open(struct sr_dev_inst *sdi)
 			sr_err("Device failed to renumerate.");
 			return SR_ERR;
 		}
-		sr_info("Device came back after %" PRIi64 "ms.", timediff_ms);
+		sr_err("Device came back after %" PRIi64 "ms.", timediff_ms);
 	} else {
-		sr_info("Firmware upload was not needed.");
+		sr_err("Firmware upload was not needed.");
 		ret = fx2lafw_dev_open(sdi, di);
+		if (ret != SR_OK) {
+			sr_err("Error: Firmware uploaded not responding.");
+		}
 	}
 
 	if (ret != SR_OK) {
@@ -309,9 +314,15 @@ static int dev_open(struct sr_dev_inst *sdi)
 	}
 
 	if (devc->cur_samplerate == 0) {
-		/* Samplerate hasn't been set; default to the slowest one. */
-		devc->cur_samplerate = samplerates[0];
+		/* Samplerate hasn't been set; default to the max supported by the device */
+		switch (devc->enumerated_speed) {
+			case 0:   devc->cur_samplerate = samplerates[0]; break;
+			case 12:  devc->cur_samplerate = samplerates[SAMPLERATE_INDEX_12MBPS]; break;
+			case 5000:
+			case 480: devc->cur_samplerate = samplerates[SAMPLERATE_INDEX_480MBPS]; break;
+		}
 	}
+	sr_err("Device opened ok");
 
 	return SR_OK;
 }
@@ -331,6 +342,8 @@ static int dev_close(struct sr_dev_inst *sdi)
 	usb->devhdl = NULL;
 	sdi->status = SR_ST_INACTIVE;
 
+	sr_err("close");
+
 	return SR_OK;
 }
 
@@ -346,6 +359,8 @@ static int cleanup(void)
 
 	g_free(drvc);
 	di->priv = NULL;
+
+	sr_err("cleanup");
 
 	return ret;
 }
@@ -380,6 +395,7 @@ static int config_get(int id, GVariant **data, const struct sr_dev_inst *sdi,
 	default:
 		return SR_ERR_NA;
 	}
+	sr_err("config get");
 
 	return SR_OK;
 }
@@ -406,6 +422,7 @@ static int config_set(int id, GVariant *data, const struct sr_dev_inst *sdi,
 	} else {
 		ret = SR_ERR_NA;
 	}
+	sr_err("config set");
 
 	return ret;
 }
@@ -536,6 +553,8 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi, void *cb_data)
 		return ret;
 	}
 
+	sr_err("acq started");
+
 	return SR_OK;
 }
 
@@ -544,6 +563,8 @@ static int dev_acquisition_stop(struct sr_dev_inst *sdi, void *cb_data)
 	(void)cb_data;
 
 	fx2lafw_abort_acquisition(sdi->priv);
+
+	sr_err("acq aborted");
 
 	return SR_OK;
 }
